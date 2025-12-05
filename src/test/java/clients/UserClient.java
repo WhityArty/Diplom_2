@@ -1,7 +1,9 @@
 package clients;
 
 import io.qameta.allure.Step;
+import io.restassured.http.ContentType;
 import io.restassured.response.Response;
+import io.restassured.specification.RequestSpecification;
 import models.User;
 
 import static io.restassured.RestAssured.given;
@@ -10,11 +12,20 @@ public class UserClient {
 
     private static final String BASE_URL = "https://stellarburgers.education-services.ru/api";
 
+    private RequestSpecification getBaseSpec() {
+        return given()
+                .baseUri(BASE_URL)
+                .contentType(ContentType.JSON);
+    }
+
+    private RequestSpecification getAuthSpec(String accessToken) {
+        return getBaseSpec()
+                .header("Authorization", accessToken);
+    }
+
     @Step("Создание пользователя")
     public Response createUser(User user) {
-        return given()
-                .header("Content-type", "application/json")
-                .baseUri(BASE_URL)
+        return getBaseSpec()
                 .body(user)
                 .when()
                 .post("/auth/register");
@@ -22,9 +33,7 @@ public class UserClient {
 
     @Step("Логин пользователя")
     public Response loginUser(User user) {
-        return given()
-                .header("Content-type", "application/json")
-                .baseUri(BASE_URL)
+        return getBaseSpec()
                 .body(user)
                 .when()
                 .post("/auth/login");
@@ -32,38 +41,35 @@ public class UserClient {
 
     @Step("Удаление пользователя")
     public Response deleteUser(String accessToken) {
-        return given()
-                .header("Authorization", accessToken)
-                .baseUri(BASE_URL)
+        return getAuthSpec(accessToken)
                 .when()
                 .delete("/auth/user");
     }
 
     @Step("Обновление данных пользователя")
     public Response updateUser(User user, String accessToken) {
-        return given()
-                .header("Content-type", "application/json")
-                .header("Authorization", accessToken != null ? accessToken : "")
-                .baseUri(BASE_URL)
-                .body(user)
-                .when()
-                .patch("/auth/user");
+        if (accessToken != null && !accessToken.isEmpty()) {
+            return getAuthSpec(accessToken)
+                    .body(user)
+                    .when()
+                    .patch("/auth/user");
+        } else {
+            return getBaseSpec()
+                    .body(user)
+                    .when()
+                    .patch("/auth/user");
+        }
     }
 
     @Step("Создание заказа")
     public Response createOrder(Object order, String accessToken) {
-        if (accessToken != null) {
-            return given()
-                    .header("Content-type", "application/json")
-                    .header("Authorization", accessToken)
-                    .baseUri(BASE_URL)
+        if (accessToken != null && !accessToken.isEmpty()) {
+            return getAuthSpec(accessToken)
                     .body(order)
                     .when()
                     .post("/orders");
         } else {
-            return given()
-                    .header("Content-type", "application/json")
-                    .baseUri(BASE_URL)
+            return getBaseSpec()
                     .body(order)
                     .when()
                     .post("/orders");
@@ -72,17 +78,21 @@ public class UserClient {
 
     @Step("Получение заказов пользователя")
     public Response getUserOrders(String accessToken) {
-        if (accessToken != null) {
-            return given()
-                    .header("Authorization", accessToken)
-                    .baseUri(BASE_URL)
+        if (accessToken != null && !accessToken.isEmpty()) {
+            return getAuthSpec(accessToken)
                     .when()
                     .get("/orders");
         } else {
-            return given()
-                    .baseUri(BASE_URL)
+            return getBaseSpec()
                     .when()
                     .get("/orders");
         }
+    }
+
+    @Step("Получение списка ингредиентов")
+    public Response getIngredients() {
+        return getBaseSpec()
+                .when()
+                .get("/ingredients");
     }
 }

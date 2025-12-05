@@ -3,6 +3,7 @@ package tests;
 import clients.UserClient;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.response.Response;
+import models.IngredientsResponse;
 import models.Order;
 import models.User;
 import org.junit.After;
@@ -10,16 +11,20 @@ import org.junit.Before;
 import org.junit.Test;
 import utils.DataGenerator;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import static org.apache.http.HttpStatus.*;
 import static org.hamcrest.Matchers.*;
 
 public class OrderCreationTest {
+
     private UserClient userClient;
     private User user;
     private String accessToken;
+    private List<String> validIngredients;
 
     @Before
     public void setUp() {
@@ -28,6 +33,19 @@ public class OrderCreationTest {
 
         Response response = userClient.createUser(user);
         accessToken = response.path("accessToken");
+
+        // Получаем валидные ингредиенты
+        Response ingredientsResponse = userClient.getIngredients();
+        ingredientsResponse.then().statusCode(SC_OK);
+
+        IngredientsResponse ingredients = ingredientsResponse.as(IngredientsResponse.class);
+        validIngredients = new ArrayList<>();
+        if (ingredients.getData() != null && !ingredients.getData().isEmpty()) {
+            // Берем первые 2 ингредиента для тестов
+            for (int i = 0; i < Math.min(2, ingredients.getData().size()); i++) {
+                validIngredients.add(ingredients.getData().get(i).get_id());
+            }
+        }
     }
 
     @After
@@ -40,9 +58,12 @@ public class OrderCreationTest {
     @Test
     @DisplayName("Создание заказа с авторизацией и ингредиентами")
     public void createOrderWithAuthAndIngredientsTest() {
+        assumeTrue("Должно быть доступно как минимум 2 ингредиента",
+                validIngredients.size() >= 2);
+
         Order order = new Order(Arrays.asList(
-                "61c0c5a71d1f82001bdaaa6d",
-                "61c0c5a71d1f82001bdaaa6f"
+                validIngredients.get(0),
+                validIngredients.get(1)
         ));
         Response response = userClient.createOrder(order, accessToken);
         response.then()
@@ -54,9 +75,12 @@ public class OrderCreationTest {
     @Test
     @DisplayName("Создание заказа без авторизации с ингредиентами")
     public void createOrderWithoutAuthWithIngredientsTest() {
+        assumeTrue("Должно быть доступно как минимум 2 ингредиента",
+                validIngredients.size() >= 2);
+
         Order order = new Order(Arrays.asList(
-                "61c0c5a71d1f82001bdaaa6d",
-                "61c0c5a71d1f82001bdaaa6f"
+                validIngredients.get(0),
+                validIngredients.get(1)
         ));
         Response response = userClient.createOrder(order, null);
         response.then()
@@ -104,5 +128,9 @@ public class OrderCreationTest {
 
         response.then()
                 .statusCode(SC_INTERNAL_SERVER_ERROR);
+    }
+
+    private void assumeTrue(String message, boolean condition) {
+        org.junit.Assume.assumeTrue(message, condition);
     }
 }

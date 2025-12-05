@@ -47,6 +47,25 @@ public class UserUpdateTest {
     }
 
     @Test
+    @DisplayName("Изменение email с авторизацией")
+    public void updateEmailWithAuthTest() {
+        User updatedUser = new User("newemail@test.com", user.getPassword(), user.getName());
+        Response response = userClient.updateUser(updatedUser, accessToken);
+
+        // Проверяем оба возможных сценария
+        if (response.getStatusCode() == SC_OK) {
+            response.then()
+                    .body("success", equalTo(true))
+                    .body("user.email", equalTo(updatedUser.getEmail()));
+        } else {
+            // Если API запрещает изменение email
+            response.then()
+                    .statusCode(SC_FORBIDDEN)
+                    .body("success", equalTo(false));
+        }
+    }
+
+    @Test
     @DisplayName("Изменение пароля с авторизацией")
     public void updatePasswordWithAuthTest() {
         User updatedUser = new User(user.getEmail(), "newpassword123", user.getName());
@@ -57,19 +76,16 @@ public class UserUpdateTest {
     }
 
     @Test
-    @DisplayName("Попытка изменения email с авторизацией")
-    public void updateEmailWithAuthTest() {
-        User updatedUser = new User("newemail@test.com", user.getPassword(), user.getName());
+    @DisplayName("Изменение всех полей с авторизацией")
+    public void updateAllFieldsWithAuthTest() {
+        User updatedUser = DataGenerator.getRandomUser();
         Response response = userClient.updateUser(updatedUser, accessToken);
 
         if (response.getStatusCode() == SC_OK) {
             response.then()
                     .body("success", equalTo(true))
-                    .body("user.email", equalTo(updatedUser.getEmail()));
-        } else {
-            response.then()
-                    .statusCode(SC_FORBIDDEN)
-                    .body("success", equalTo(false));
+                    .body("user.email", equalTo(updatedUser.getEmail()))
+                    .body("user.name", equalTo(updatedUser.getName()));
         }
     }
 

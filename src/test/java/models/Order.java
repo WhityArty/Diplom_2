@@ -1,18 +1,16 @@
 package models;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.List;
 
 @Setter
 @Getter
+@AllArgsConstructor
+@NoArgsConstructor
 public class Order {
-
     private List<String> ingredients;
-
-    public Order(List<String> ingredients) {
-        this.ingredients = ingredients;
-    }
-
 }
